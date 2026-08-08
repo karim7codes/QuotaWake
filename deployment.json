@@ -1,0 +1,11 @@
+{
+    "network":  "studionet",
+    "chainId":  61999,
+    "contractAddress":  "0x80d55b125c54BCfe4Aba50e4cD309C18b91bF634",
+    "explorerBaseUrl":  "https://explorer-studio.genlayer.com",
+    "status":  "smoke_verified",
+    "sourceHash":  "d45c7626807d0c9364b66eb4163a32edcc8e1fae60b9f6a4208010b833e1403a",
+    "methodCount":  12,
+    "rpcUrl":  "https://studio.genlayer.com/api",
+    "smokeRecordId":  "smoke-season-ms9nuzin"
+}
