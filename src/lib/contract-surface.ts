@@ -4,6 +4,14 @@ export const contractSurface = {
   reference: "Flowing Waves motion field",
   methods: [
   {
+    "name": "configure_evidence_authorities",
+    "readonly": false
+  },
+  {
+    "name": "register_vessel",
+    "readonly": false
+  },
+  {
     "name": "establish_quota_season",
     "readonly": false
   },
@@ -38,6 +46,14 @@ export const contractSurface = {
   {
     "name": "post_quota_debit",
     "readonly": false
+  },
+  {
+    "name": "read_vessel_authorization",
+    "readonly": true
+  },
+  {
+    "name": "read_transfer_offer",
+    "readonly": true
   },
   {
     "name": "read_vessel_quota",

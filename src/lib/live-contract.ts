@@ -42,6 +42,17 @@ export function useLiveWrite() {
       const receipt = await readClient.waitForTransactionReceipt({ hash, status: TransactionStatus.FINALIZED, interval: 3000, retries: 200 });
       const result = receipt.resultName ?? (receipt as unknown as { result_name?: string }).result_name;
       if (result !== "MAJORITY_AGREE") throw new Error(`Consensus ended with ${result || "unknown"}.`);
+      const execution = receipt as unknown as {
+        txExecutionResultName?: string;
+        tx_execution_result_name?: string;
+        consensus_data?: { leader_receipt?: Array<{ execution_result?: string }> };
+      };
+      const executionResult = execution.txExecutionResultName
+        ?? execution.tx_execution_result_name
+        ?? execution.consensus_data?.leader_receipt?.[0]?.execution_result;
+      if (executionResult && executionResult !== "SUCCESS") {
+        throw new Error(`Contract execution ended with ${executionResult}.`);
+      }
       setStatus({ stage: "finalized", hash });
       await queryClient.invalidateQueries({ queryKey: liveKey });
       return hash;

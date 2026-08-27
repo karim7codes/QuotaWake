@@ -7,7 +7,7 @@ export const appSpec = {
   "brand": "QuotaWake",
   "kicker": "Traceable fishery quota",
   "headline": "Every catch leaves a wake.",
-  "description": "Issue quota lots, record vessel transfers and zone crossings, then reconcile each landing against the public season ledger with GenLayer validators.",
+  "description": "Bind authorized vessel controllers and quota owners, transfer traceable lots, and reconcile authenticated landing records with GenLayer validators.",
   "workspace": "Live tidefield",
   "workspaceCopy": "Navigate seasons, lots, voyages, crossings, landings, and final quota debits as one continuous maritime journal.",
   "primary": "Launch tidefield",
@@ -20,26 +20,26 @@ export const appSpec = {
     [
       "SEASON",
       "Issue the quota",
-      "Establish species policy and allocate vessel lots."
+      "Register authority sources, bind vessels, and allocate owner-held lots."
     ],
     [
       "VOYAGE",
       "Trace the wake",
-      "Record transfers, departure, and every zone crossing."
+      "Require owner acceptance, controller authorization, and ordered crossings."
     ],
     [
       "LANDING",
       "Post the debit",
-      "Reconcile evidence and debit the season ledger."
+      "Fetch issuer-bound evidence and debit only the authorized vessel ledger."
     ]
   ],
   "stats": [
     [
-      "9",
+      "11",
       "maritime writes"
     ],
     [
-      "3",
+      "5",
       "ledger lenses"
     ],
     [
@@ -50,6 +50,29 @@ export const appSpec = {
 } as const;
 
 export const writeActions = [
+  {
+    "name": "configure_evidence_authorities",
+    "label": "Configure authorities",
+    "description": "Registrar: lock trusted HTTPS prefixes for vessel, policy, permit, and landing records.",
+    "fields": [
+      { "name": "vessel_registry_prefix", "label": "Vessel registry prefix", "type": "str" },
+      { "name": "policy_prefix", "label": "Policy source prefix", "type": "str" },
+      { "name": "permit_prefix", "label": "Permit source prefix", "type": "str" },
+      { "name": "landing_prefix", "label": "Landing source prefix", "type": "str" }
+    ]
+  },
+  {
+    "name": "register_vessel",
+    "label": "Register vessel",
+    "description": "Registrar: bind a vessel to its controller and quota owner using an authenticated registry record.",
+    "fields": [
+      { "name": "vessel_id", "label": "Vessel ID", "type": "str" },
+      { "name": "controller", "label": "Controller wallet", "type": "str" },
+      { "name": "quota_owner", "label": "Quota owner wallet", "type": "str" },
+      { "name": "registry_url", "label": "Registry record URL", "type": "str" },
+      { "name": "registry_sha256", "label": "Registry SHA-256", "type": "str" }
+    ]
+  },
   {
     "name": "establish_quota_season",
     "label": "Establish season",
@@ -68,6 +91,11 @@ export const writeActions = [
       {
         "name": "policy_url",
         "label": "Policy URL",
+        "type": "str"
+      },
+      {
+        "name": "policy_sha256",
+        "label": "Policy SHA-256",
         "type": "str"
       },
       {
@@ -172,6 +200,11 @@ export const writeActions = [
         "name": "permit_url",
         "label": "Permit URL",
         "type": "str"
+      },
+      {
+        "name": "permit_sha256",
+        "label": "Permit SHA-256",
+        "type": "str"
       }
     ]
   },
@@ -221,6 +254,11 @@ export const writeActions = [
         "name": "landing_url",
         "label": "Landing evidence URL",
         "type": "str"
+      },
+      {
+        "name": "landing_sha256",
+        "label": "Landing SHA-256",
+        "type": "str"
       }
     ]
   },
@@ -250,6 +288,20 @@ export const writeActions = [
   }
 ] as const satisfies readonly WriteAction[];
 export const readActions = [
+  {
+    "name": "read_vessel_authorization",
+    "label": "Vessel authorization",
+    "fields": [
+      { "name": "vessel_id", "label": "Vessel ID", "type": "str" }
+    ]
+  },
+  {
+    "name": "read_transfer_offer",
+    "label": "Transfer offer",
+    "fields": [
+      { "name": "offer_id", "label": "Offer ID", "type": "str" }
+    ]
+  },
   {
     "name": "read_vessel_quota",
     "label": "Vessel quota",

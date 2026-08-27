@@ -1,45 +1,90 @@
 # QuotaWake
 
-QuotaWake keeps a public accounting lineage from a fishery season ceiling to quota lots, transfers, voyages, landings, and the exact lots consumed by each debit.
+QuotaWake is a GenLayer fisheries ledger that preserves quota lineage from a season ceiling through authority-bound vessels, transferable lots, voyages, authenticated landings, and deterministic quota debits.
 
-## Season ledger
+Live app: https://karim7codes.github.io/QuotaWake/
+App route: https://karim7codes.github.io/QuotaWake/app/
 
-The authority establishes a season before issuing quota. Every lot has an owner, remaining units, and lineage. An accepted transfer creates a child lot instead of editing its parent, so allocation history survives every change of custody.
+## Why GenLayer
 
-## Voyage journal
+The contract does not trust a caller's description of a catch. Validators independently retrieve hash-pinned policy, permit, and landing records from registrar-configured HTTPS authority sources. They compare the fields that control the result—verified units, debit units, and landing class—before the contract can alter quota accounting.
 
-A vessel departs, records chronological zone crossings, and declares a catch landing. GenLayer converts the landing evidence into verified and debit units. Posting then consumes the vessel's available lots deterministically; uncovered units become a visible deficit rather than a vague rejection.
+Everything else is deterministic: identity checks, lot custody, transfer acceptance, chronological zone events, evidence replay protection, lot spending, deficits, and conservation totals.
 
-The ledger offers **12 public methods: 9 writes and 3 reads**. Writes cover season establishment, issuance, transfer offer and acceptance, departure, crossings, landing, reconciliation, and debit posting. Views expose vessel quota, a voyage journal, and the season ledger.
+## Security model
 
-## Read the wake
+- The deployer is the fisheries registrar.
+- The registrar configures four trusted source prefixes: vessel registry, policy, permit, and landing authority.
+- Only the registrar can bind a vessel ID to its controller wallet and quota-owner wallet.
+- Vessel records must come from the configured registry, match an exact SHA-256 digest, identify `QUOTAWAKE-VESSEL-REGISTRY`, and reproduce both wallets.
+- Issued lots belong to the registered quota owner, never to the caller that names a vessel.
+- Only the current lot owner can offer a transfer. Only the registered owner of the destination vessel can accept it.
+- Only the registered controller can depart, log crossings, declare a landing, and post the reconciled debit.
+- Permits and landings must come from configured authority sources, use exact SHA-256 digests, contain the expected issuer ID, and match the vessel, season, voyage, species, and units.
+- A landing evidence record is single-use.
+- Posting consumes only lots owned by the registered owner of the voyage's vessel. Uncovered units remain visible as a deficit.
 
-QuotaWake does not use a dashboard template. The landing page introduces the public quota lineage, while `/app` turns it into a tidefield with lot inventory, voyage sequence, crossing records, and signing controls. The header identity links back to `/`, and all operational work remains in this single app route.
+## Contract lifecycle
 
-## Live bearing
+1. `configure_evidence_authorities` locks the authority source prefixes.
+2. `register_vessel` binds vessel, controller, and quota owner to a fetched registry record.
+3. `establish_quota_season` verifies the policy source and opens a hard issuance ceiling.
+4. `issue_quota_lot` creates an owner-held lot for a registered vessel.
+5. `offer_quota_transfer` and `accept_quota_transfer` create an accepted child lot while preserving lineage.
+6. `depart_voyage`, `log_zone_crossing`, and `declare_catch_landing` build the authorized voyage journal.
+7. `reconcile_landing_debit` runs GenLayer consensus over the authenticated evidence set.
+8. `post_quota_debit` consumes eligible lots deterministically and records any deficit.
 
-The smoke proof established `smoke-season-ms9nuzin`, issued its first lot, and read the resulting `LOT_ISSUED` state from Studionet. Tests verify the twelve-method surface, chronological and ceiling guards, wallet isolation, contract source hash, and finalized majority consensus.
+Five views expose vessel authorization, transfer acceptance, vessel quota, voyage journal, and season conservation.
 
-Launch the chart:
+## Verified StudioNet deployment
+
+| Item | Value |
+| --- | --- |
+| Network | GenLayer StudioNet (`61999`) |
+| Contract | `0x073a115839e7Bd038457b15dE9e2cc4dF5AE6937` |
+| Explorer | `https://explorer-studio.genlayer.com/address/0x073a115839e7Bd038457b15dE9e2cc4dF5AE6937` |
+| Contract SHA-256 | `fc9625e850bac52a745860465c30efb8c9bf1fef1181b4b48bb031239c988798` |
+| Lifecycle | 12 writes, 5 views, final state `POSTED` |
+
+Deployment and lifecycle evidence is kept outside the repository.
+
+## Reproduce locally
 
 ```powershell
 npm install
 npm run typecheck
 npm test
-npm run test:studionet
 npm run build
-npm run dev
 ```
 
-Local harbor: `http://localhost:4413/`.
+Validate the intelligent contract and run the direct suite:
 
-## Registry coordinates
+```powershell
+python -m pip install -r requirements.txt
+genvm-lint check contracts/QuotaWake.py --json
+python -m pytest tests/direct -q
+```
 
-| Registry item | Value |
-| --- | --- |
-| Network | GenLayer Studionet (`61999`) |
-| Quota contract | `0x80d55b125c54BCfe4Aba50e4cD309C18b91bF634` |
-| Fishery wallet | `0xaf4FE3870baCCF72Dc7ec713d0CB7DcF6997e7d3` |
-| Deployment transaction | `0x70d0fa32ff7957ba8e0ec9bfad3f17bb35f0b7d88a43bcd716a68fd76bfafac0` |
-| Source hash | `d45c7626807d0c9364b66eb4163a32edcc8e1fae60b9f6a4208010b833e1403a` |
-| Verification | `smoke_verified` |
+Check the deployed schema:
+
+```powershell
+npm run test:studionet
+```
+
+The full deployment script reads `GENLAYER_PRIVATE_KEY` from the environment. It never stores a private key in source or artifacts.
+
+## Frontend
+
+The responsive Next.js interface uses RainbowKit and wagmi. The connected browser wallet is bridged into the GenLayer write client, signs the selected role-specific transaction, waits for `FINALIZED`, checks `MAJORITY_AGREE`, and rejects failed leader execution. Run it locally with `npm run dev` and open `http://localhost:4413`.
+
+## Repository layout
+
+```text
+contracts/              GenLayer contract
+scripts/                StudioNet lifecycle runner
+src/                    Next.js application
+tests/direct/           authorization and accounting regressions
+tests/source.test.mjs   repository and client safeguards
+tests/studionet.test.mjs deployed schema verification
+```
